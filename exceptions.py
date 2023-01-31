@@ -1,11 +1,21 @@
-class EndpointRequestError(Exception):
-    def __init__(self, msg):
-        super().__init__()
+from requests import RequestException, ConnectionError
+from requests.exceptions import InvalidJSONError
+# from telegram.error import TelegramError
+#
+#
+# class TelegramDispatchError(TelegramError):
+#     def __init__(self, message):
+#         super().__init__(message)
 
 
-class HTTPConnectionError(Exception):
-    def __init__(self, msg):
-        super().__init__()
+class EndpointRequestError(RequestException):
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class HTTPConnectionError(ConnectionError):
+    def __init__(self, message):
+        super().__init__(message)
 
 
 class ResponseKeyError(KeyError):
@@ -13,11 +23,11 @@ class ResponseKeyError(KeyError):
         super().__init__(message)
 
 
-class UnexpectedStatusError(Exception):
-    def __init__(self, msg):
-        super().__init__()
+class UnexpectedStatusError(KeyError):
+    def __init__(self, message):
+        super().__init__(message)
 
 
-class InvalidJSONError(Exception):
-    def __init__(self, msg):
-        super().__init__()
+class JSONProcessingError(InvalidJSONError):
+    def __init__(self, message):
+        super().__init__(message)

@@ -7,14 +7,13 @@ import requests
 import time
 import telegram
 
-from datetime import datetime
 from dotenv import load_dotenv
 from logging.handlers import RotatingFileHandler
 from os import getenv
 from sys import stdout, exit
 
 from exceptions import (
-    EndpointRequestError, InvalidJSONError,
+    EndpointRequestError, JSONProcessingError,
     HTTPConnectionError, ResponseKeyError, UnexpectedStatusError
 )
 
@@ -53,9 +52,11 @@ WRONG_STATUS_ERR_MSG = "Неверный статус домашней рабо�
 TYPE_ERR_MSG = 'Ответ неверного типа'
 SERV_RUN_ERR_MSG = 'Ошибка выполнения бота на сервере'
 
+BOT_DEPLOYED_MSG = 'Бот запущен на сервере'
 RESP_RECEIVED_MSG = 'Ответ сервера получен'
 STAT_CHANGE_MSG = 'Изменился статус проверки работы "{0}". {1}'
 JSON_ERR_MSG = 'Невалидный JSON'
+USER_EXIT_MSG = 'Прерывание пользователем'
 
 HOMEWORK_VERDICTS = {
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
@@ -94,7 +95,8 @@ def send_message(bot, message):
         bot.send_message(TELEGRAM_CHAT_ID, message)
     except telegram.error.TelegramError:
         logging.error(TELEGRAM_ERR_MSG)
-        # просто снёс кастомный эксепш
+        # сделал по логике теста. там телеграм вызывает бейс эксепшн.
+        # с остальными библиотеками эксепшны работают
         raise Exception(TELEGRAM_ERR_MSG)
     else:
         logging.debug('Сообщение отправлено')
@@ -118,7 +120,7 @@ def get_api_answer(timestamp):
     try:
         return response.json()
     except requests.exceptions.InvalidJSONError:
-        raise InvalidJSONError(JSON_ERR_MSG.format(
+        raise JSONProcessingError(JSON_ERR_MSG.format(
             url=response.url,
             headers=response.headers,
             status_code=response.status_code,
@@ -152,7 +154,7 @@ def parse_status(homework):
         verdict = HOMEWORK_VERDICTS[homework['status']]
     except KeyError:
         logging.error(WRONG_STATUS_ERR_MSG)
-        raise UnexpectedStatusError
+        raise UnexpectedStatusError(WRONG_STATUS_ERR_MSG)
     return STAT_CHANGE_MSG.format(homework_name, verdict)
 
 
@@ -181,25 +183,22 @@ def main():  # noqa: C901
         logging.critical(sys_e)
         exit()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    send_message(bot, 'Бот запущен на сервере')
-    api_errors = set()
+    send_message(bot, BOT_DEPLOYED_MSG)
+    errors = set()
     last_status = ['']
     while True:
         try:
             response = get_api_answer(TODAY)
             process_api_response(response, bot, last_status)
             time.sleep(RETRY_PERIOD)
-        except TelegramSendingError as tel_error:
-            logging.error(tel_error)
-        except Exception as api_error:
-            if api_error not in api_errors:
-                api_errors.add(api_error)
-                send_message(bot, api_error)
-            logging.error(api_error)
+        except Exception as error:
+            if error not in errors:
+                errors.add(error)
+                send_message(bot, error)
+            logging.error(error)
         except KeyboardInterrupt:
-            msg_exit = 'Прерывание пользователем'
-            logging.critical(msg_exit)
-            exit(msg_exit)
+            logging.critical(USER_EXIT_MSG)
+            exit(USER_EXIT_MSG)
         except SystemExit:
             send_message(bot, SERV_RUN_ERR_MSG)
             logging.critical(SERV_RUN_ERR_MSG)
