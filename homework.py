@@ -14,7 +14,7 @@ from os import getenv
 from sys import stdout, exit
 
 from exceptions import (
-    TelegramSendingError, EndpointRequestError, InvalidJSONError,
+    EndpointRequestError, InvalidJSONError,
     HTTPConnectionError, ResponseKeyError, UnexpectedStatusError
 )
 
@@ -25,9 +25,8 @@ TELEGRAM_TOKEN = getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = getenv('TELEGRAM_CHAT_ID')
 TOKENS = ('PRACTICUM_TOKEN', 'TELEGRAM_TOKEN', 'TELEGRAM_CHAT_ID')
 
-# Truncating date to 01, Jan 23
-TODAY = int(datetime.now().replace(hour=0, month=1, day=1).timestamp())
 RETRY_PERIOD = 10 * 60
+TODAY = int(time.time()) - RETRY_PERIOD
 
 # Testing constants
 # RETRY_PERIOD = 5
